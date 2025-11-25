@@ -28,16 +28,20 @@ let collection;
    ====================================================== */
 app.get("/cronograma", async (req, res) => {
     try {
-        const data = await collection.findOne({});
-        res.json(data ?? { tabla: [] });
+        const ultimo = await collection
+            .find()
+            .sort({ fecha: -1 })
+            .limit(1)
+            .toArray();
+
+        res.json(ultimo[0]);
     } catch (error) {
-        res.status(500).json({ error: "Error consultando cronograma" });
+        console.error("Error obteniendo cronograma:", error);
+        res.status(500).json({ error: "Error obteniendo cronograma" });
     }
 });
 
-/* ======================================================
-   🔹 2) GUARDAR/ACTUALIZAR CRONOGRAMA COMPLETO
-   ====================================================== */
+
 app.post("/guardar-cronograma", async (req, res) => {
     try {
         const { tabla } = req.body;
@@ -46,17 +50,31 @@ app.post("/guardar-cronograma", async (req, res) => {
             return res.status(400).json({ error: "El formato debe ser { tabla: [] }" });
         }
 
-        await collection.updateOne(
-            {},                 // siempre un solo documento
-            { $set: { tabla }}, // reemplaza tabla
-            { upsert: true }    // si no existe, lo crea
-        );
+        await collection.insertOne({
+            fecha: new Date(),
+            tabla
+        });
 
-        res.json({ ok: true, mensaje: "✔ Cronograma guardado correctamente" });
-        
+        res.json({ ok: true, mensaje: "✔ Nueva versión guardada correctamente" });
+
     } catch (error) {
         console.error("Error guardando:", error);
         res.status(500).json({ error: "Error guardando cronograma" });
+    }
+});
+
+
+app.get("/cronograma/historial", async (req, res) => {
+    try {
+        const historial = await collection
+            .find()
+            .sort({ fecha: -1 })
+            .toArray();
+
+        res.json(historial);
+    } catch (error) {
+        console.error("Error obteniendo historial:", error);
+        res.status(500).json({ error: "Error obteniendo historial" });
     }
 });
 
